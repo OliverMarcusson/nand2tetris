@@ -87,15 +87,15 @@ class Parser(object):
     def _Parse(self):
         arithmetic = ["add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not"]
         command_types = {
-                "arithmetic": 1,
-                "push": 2,
-                "pop": 3,
-                "label": 4,
-                "goto": 5,
-                "if-goto": 6,
-                "function": 7,
-                "return": 8,
-                "call": 9
+                "arithmetic": C_ARITHMETIC,
+                "push": C_PUSH,
+                "pop": C_POP,
+                "label": C_LABEL,
+                "goto": C_GOTO,
+                "if-goto": C_IF,
+                "function": C_FUNCTION,
+                "return": C_RETURN,
+                "call": C_CALL
                 }
         # command [arg1 [arg2]]
         self.commandType = None  #this should store the type of the command
@@ -110,10 +110,15 @@ class Parser(object):
                     self.commandType = command_types["arithmetic"]
                 else:
                     self.commandType = command_types[line[0]]
-                self.arg1 = line[0]
-                self.arg2 = 0
+                if line[0] in ("label", "goto", "if-goto", "call", "function"):
+                    self.arg1 = line[1]
+                    self.arg2 = 0
+                else:
+                    self.arg1 = line[0]
+                    self.arg2 = 0
             case 3:
                 self.commandType = command_types[line[0]]
                 self.arg1 = line[1]
                 self.arg2 = line[2]
+        # print(self.commandType, self.arg1, self.arg2)
 

@@ -1,5 +1,5 @@
-**/test.vm
-**/test.asm
+# **/test.vm
+# **/test.asm
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
