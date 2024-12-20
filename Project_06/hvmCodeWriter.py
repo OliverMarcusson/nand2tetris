@@ -22,14 +22,20 @@ class CodeWriter(object):
         self.cmpLabels = {}
         self.needHalt = True
         
-        self.sp = 255
+        self.sp = 256
         self.static = 16
         self.local = 300
         self.argument = 400
         self.this = 3000
         self.that = 3500
         self.pointer = 3
-        self.temp = 5 
+        self.temp = 5
+
+        self._WriteCode(f"@{self.sp}, D=A, @0, M=D")
+        self._WriteCode(f"@{self.local}, D=A, @1, M=D")
+        self._WriteCode(f"@{self.argument}, D=A, @2, M=D")
+        self._WriteCode(f"@{self.this}, D=A, @3, M=D")
+        self._WriteCode(f"@{self.that}, D=A, @4, M=D")
 
     def Debug(self, value):
         """
@@ -131,33 +137,51 @@ class CodeWriter(object):
 
 
     def WritePushPop(self, commandType, segment, index):
-        # Addresses
-        # 0-15: Registers
-        # 16-255: Static variables
-        # 256-2047: Stack
-        # 2048-16483: Heap
+        def should_decrement_sp():
+            skip_label = self._UniqueLabel()
+            return f"@0, D=M, @256, D=D-A, @{skip_label}, D;JLE, @0, M=M-1, ({skip_label})"
+        
+        segments = {
+                "constant": "",
+                "local": "@1, A=M",
+                "static": "@16",
+                "this": "@3, A=M",
+                "that": "@4, A=M",
+                "pointer": "@3",
+                "temp": "@5",
+                "argument": "@2, A=M"
+                }
+
         if commandType == C_PUSH:
-            self.sp += 1
-            match segment:
-                case "constant":
-                    self._WriteCode(f"@{index}, D=A, @{self.sp}, M=D")
-                case "local":
-                    self._WriteCode(f"@{self.local + index}, D=M, @{self.sp}, M=D")
-                case "static":
-                    self._WriteCode(f"@{self.static + index}, D=M, @{self.sp}, M=D")
-                case "this":
-                    self._WriteCode(f"@{self.this + index}, D=M, @{self.sp}, M=D")
-                case "that":
-                    self._WriteCode(f"@{self.that + index}, D=M, @{self.sp}, M=D")
-                case "pointer":
-                    self._WriteCode(f"@{self.pointer + index}, D=M, @{self.sp}, M=D")
-                case "temp":
-                    self._WriteCode(f"@{self.temp + index}, D=M, @{self.sp}, M=D")
-                case "argument":
-                    self._WriteCode(f"@{self.argument + index}, D=M, @{self.sp}, M=D")
+            to_push = f"@{index}, D=A, {segments[segment]}, A=D+A"
+            if segment == "constant":
+                self._WriteCode(f"@{index}, D=A, @0, A=M, M=D")
+            else:
+                self._WriteCode(f"{to_push}, D=M, @0, A=M, M=D")
+            self._WriteCode("@0, M=M+1") 
+            
+            # match segment:
+            #     case "constant":
+            #         self._WriteCode(f"@{index}, D=A, @0, A=M, M=D")
+            #     case "local":
+            #         self._WriteCode(f"@{self.local + index}, D=M, @0, A=M, M=D")
+            #     case "static":
+            #         self._WriteCode(f"@{self.static + index}, D=M, @0, A=M, M=D")
+            #     case "this":
+            #         self._WriteCode(f"@{self.this + index}, D=M, @0, A=M, M=D")
+            #     case "that":
+            #         self._WriteCode(f"@{self.that + index}, D=M, @0, A=M, M=D")
+            #     case "pointer":
+            #         self._WriteCode(f"@{self.pointer + index}, D=M, @0, A=M, M=D")
+            #     case "temp":
+            #         self._WriteCode(f"@{self.temp + index}, D=M, @0, A=M, M=D")
+            #     case "argument":
+            #         self._WriteCode(f"@{self.argument + index}, D=M, @0, A=M, M=D")
 
         if commandType == C_POP:
-            pass
+            self._WriteCode(should_decrement_sp())
+            pop_to = f"@{index}, D=A, {segments[segment]}, A=D+A"
+            self._WriteCode(f"{pop_to}, D=A, @R13, M=D, @0, A=M, D=M, @R13, A=M, M=D")
         """
         Write Hack code for 'commandType' (C_PUSH or C_POP).
         'segment' (string) is the segment name.
@@ -173,51 +197,47 @@ class CodeWriter(object):
         """
         
     def WriteArithmetic(self, command):
+        if not command in ("not", "neg"):
+            self._WriteCode("@0, M=M-1")
         match command:
             case "add":
-                self._WriteCode(f"@{self.sp}, D=M, @R13, M=D, @{self.sp - 1}, D=M, @R13, D=D+M, @{self.sp + 1}, M=D")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M, D=M, @R13, M=D, @0, A=M-1, D=M, @R13, D=D+M, @0, A=M-1, M=D")
+                
             case "sub":
-                self._WriteCode(f"@{self.sp}, D=M, @R13, M=D, @{self.sp - 1}, D=M, @R13, D=D-M, @{self.sp + 1}, M=D")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M, D=M, @0, A=M-1, M=M-D")
+                
             case "neg":
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp + 1}, M=-D")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M-1, M=-M")
+                
             case "eq":
                 eq_label = self._UniqueLabel()
                 ne_label = self._UniqueLabel()
                 end_label = self._UniqueLabel()
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp - 1}, D=D-M, @{eq_label}, D;JEQ, @{ne_label}, D;JNE")
-                self._WriteCode(f"({eq_label}), @{self.sp + 1}, M=1, @{end_label}, 0;JMP")
-                self._WriteCode(f"({ne_label}), @{self.sp + 1}, M=0, @{end_label}, 0;JMP, ({end_label})")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M, D=M, @0, A=M-1, D=D-M, @{eq_label}, D;JEQ, @{ne_label}, D;JNE")
+                self._WriteCode(f"({eq_label}), @0, A=M-1, M=-1, @{end_label}, 0;JMP")
+                self._WriteCode(f"({ne_label}), @0, A=M-1, M=0, @{end_label}, 0;JMP, ({end_label})")
+                
             case "gt":
                 gt_label = self._UniqueLabel()
                 end_label = self._UniqueLabel()
-                self._WriteCode(f"@{self.sp + 1}, M=0")
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp - 1}, D=D-M, @{gt_label}, D;JGT, @{end_label}, 0;JMP, ({gt_label}), @{self.sp + 1}, M=1, ({end_label})")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M-1, D=M, @0, A=M, D=D-M, @0, A=M-1, M=0, @{gt_label}, D;JGT, @{end_label}, 0;JMP, ({gt_label}), @0, A=M-1, M=-1, ({end_label})")
+                
             case "lt":
                 lt_label = self._UniqueLabel()
                 end_label = self._UniqueLabel()
-                self._WriteCode(f"@{self.sp + 1}, M=0")
-                self._WriteCode(f"@{self.sp - 1}, D=M, @{self.sp}, D=D-M")
+                self._WriteCode(f"@0, A=M-1, D=M, @0, A=M, D=D-M, @0, A=M-1, M=0")
                 self._WriteCode(f"@{lt_label}, D;JLT, @{end_label}, 0;JMP")
-                self._WriteCode(f"({lt_label}), @{self.sp + 1}, M=1, ({end_label})")
-                self.sp += 1
+                self._WriteCode(f"({lt_label}), @0, A=M-1, M=-1, ({end_label})")
+                
             case "and":
-                self._WriteCode(f"@{self.sp + 1}, M=0")
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp - 1}, D=D&M, @{self.sp + 1}, M=D")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M, D=M, @0, A=M-1, D=D&M, @0, A=M-1, M=D")
+                
             case "or":
-                self._WriteCode(f"@{self.sp + 1}, M=0")
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp - 1}, D=D|M, @{self.sp + 1}, M=D")
-                self.sp += 1
+                self._WriteCode(f"@0, A=M, D=M, @0, A=M-1, D=D|M, @0, A=M-1, M=D")
+                
             case "not":
-                self._WriteCode(f"@{self.sp + 1}, M=0")
-                self._WriteCode(f"@{self.sp}, D=M, @{self.sp + 1}, M=!D")
-                self.sp += 1
-
+                self._WriteCode(f"@0, A=M-1, M=!M")
+        
         """
         Write Hack code for stack arithmetic 'command' (str).
 	To be implemented as part of Project 6
