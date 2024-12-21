@@ -6,4 +6,4 @@ This is my work in the nand2tetris series!
 <br>
 💜 **Project 5**: The Hack assembler
 <br>
-💜 **Project 6**: The Jack VM Translator
+💜 **Project 7**: The Jack VM Translator, part II
