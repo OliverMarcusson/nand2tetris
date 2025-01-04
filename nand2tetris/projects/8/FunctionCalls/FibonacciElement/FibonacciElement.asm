@@ -175,7 +175,7 @@ M=M-1
 A=M
 D=M
 @Main.fibonacci$N_LT_2
-D;JGT
+D;JNE
 @Main.fibonacci$N_GE_2
 0;JMP
 (Main.fibonacci$N_LT_2)

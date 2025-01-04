@@ -20,7 +20,7 @@ class CodeWriter(object):
         self.callLabel = None
         self.cmpLabels = {}
         self.needHalt = True
-        self.functionNames = ["Sys.init"]
+        self.functionNames = []
         
         # Starting points for memory segments
         # self.sp = 256
@@ -118,18 +118,31 @@ class CodeWriter(object):
     def WritePushPop(self, commandType, segment, index):
         def should_decrement_sp():
             skip_label = self._UniqueLabel()
-            return f"@0, D=M, @256, D=D-A, @{skip_label}, D;JLE, @0, M=M-1, ({skip_label})"
-        
+            return f"@0, D=M, @256, D=D-A, @{skip_label}, D;JLE, @0, M=M-1, ({skip_label})" 
         segments = {
                 "constant": "",
                 "local": "@1, A=M",
-                "static": "@16",
                 "this": "@3, A=M",
                 "that": "@4, A=M",
                 "pointer": "@3",
                 "temp": "@5",
                 "argument": "@2, A=M"
                 }
+
+        if segment == "static":
+            if commandType == C_PUSH:
+                self._WriteCode(f"// Pushing static {index}")
+                self._WriteCode(f"@{self._StaticLabel(index)}, D=M, @0, A=M, M=D")
+                self._WriteCode("@0, M=M+1")
+            
+            elif commandType == C_POP:
+                self._WriteCode(f"// Popping to static {index}")
+                self._WriteCode("@0, M=M-1")
+                self._WriteCode("@0, A=M")
+                self._WriteCode("D=M")
+                self._WriteCode(f"@{self._StaticLabel(index)}")
+                self._WriteCode("M=D")
+            return
 
         if commandType == C_PUSH:
             self._WriteCode(f"// Pushing {segment} {index}")
@@ -142,7 +155,8 @@ class CodeWriter(object):
             
         if commandType == C_POP:
             self._WriteCode(f"// Popping to {segment} {index}")
-            self._WriteCode(should_decrement_sp())
+            # self._WriteCode(should_decrement_sp())
+            self._WriteCode("@0, M=M-1")
             pop_to = f"@{index}, D=A, {segments[segment]}, A=D+A"
             self._WriteCode(f"{pop_to}, D=A, @R13, M=D, @0, A=M, D=M, @R13, A=M, M=D")
     
@@ -242,7 +256,7 @@ class CodeWriter(object):
             label = self._LocalLabel(label)
 
         self._WriteCode(f"// If-goto {label}")
-        self._WriteCode(f"@0, M=M-1, A=M, D=M, @{label}, D;JGT")
+        self._WriteCode(f"@0, M=M-1, A=M, D=M, @{label}, D;JNE")
 
     def WriteFunction(self, functionName, numLocals):
         """
@@ -293,4 +307,4 @@ class CodeWriter(object):
         self.WriteGoto(functionName)
         self._WriteCode(f"({return_label})")
 
-    
+   
