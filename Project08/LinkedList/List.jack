@@ -1,0 +1,70 @@
+class List {
+  field int data;
+  field List next;
+
+  constructor List new(int car, List cdr) {
+    let data = car;
+    let next = cdr;
+    return this;
+  } 
+
+  method void dispose() {
+    if (~(next = null)) {
+      do next.dispose();
+    }
+
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  method void print() {
+    do Output.printString("-> ");
+    do Output.printInt(data);
+    
+    if (~(next = null)) {
+      do next.print();
+    }
+
+    if (next = null) {
+      do Output.println();
+    }
+
+    return;
+  }
+  
+  method List insertInOrder(int element) {
+    var List newNode;
+
+    if (element < data) {
+      let next = List.new(data, next);
+      let data = element;
+      return this;
+    }
+    
+    if (element = data) {
+      return List.new(element, this);
+    }
+
+    if (next = null) {
+      let next = List.new(element, null);
+      return this;
+    }
+
+    let next = next.insertInOrder(element);
+    return this;
+  }
+
+  method List find(int element) {
+    var List result;
+    if (data = element) {
+      return this;
+    }
+
+    if (next = null) {
+      return null;
+    }
+    
+    let result = next.find(element);
+    return result;
+  }
+}
