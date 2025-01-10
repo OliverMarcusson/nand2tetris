@@ -7,3 +7,5 @@ This is my work in the nand2tetris series!
 💜 **Project 5**: The Hack assembler
 <br>
 💜 **Project 7**: The Jack VM Translator, part II
+<br>
+💜 **Project 8**: The Jack Syntax Analyzer
