@@ -1,0 +1,99 @@
+class Node {
+  field int allocated;
+  field int length;
+  field Node next;
+
+  constructor Node new(int car, Node cdr) {
+    let allocated = 0;
+    let length = car;
+    let next = cdr;
+    return this;
+  }
+  
+  method int Allocated() {
+    return allocated;
+  }
+
+  method int Length() {
+    return length;
+  }
+
+  method Node Next() {
+    return next;
+  }
+  
+  method void setAllocated(int x) {
+    let allocated = x;
+    return;
+  }
+
+  method void setLength(int x) {
+    let length = x;
+    return;
+  }
+  
+  method void setNext(int x) {
+    let next = x;
+    return;
+  }
+
+  method void dispose() {
+    if (~(next = null)) {
+      do next.dispose();
+    }
+
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  method void print() {
+    do Output.printString("-> ");
+    do Output.printInt(length);
+    
+    if (~(next = null)) {
+      do next.print();
+    }
+
+    if (next = null) {
+      do Output.println();
+    }
+
+    return;
+  }
+  
+  method Node insertInOrder(int element) {
+    var Node newNode;
+
+    if (element < length) {
+      let next = Node.new(length, next);
+      let length = element;
+      return this;
+    }
+    
+    if (element = length) {
+      return Node.new(element, this);
+    }
+
+    if (next = null) {
+      let next = Node.new(element, null);
+      return this;
+    }
+
+    let next = next.insertInOrder(element);
+    return this;
+  }
+
+  method Node find(int element) {
+    var Node result;
+    if (length = element) {
+      return this;
+    }
+
+    if (next = null) {
+      return null;
+    }
+    
+    let result = next.find(element);
+    return result;
+  }
+}

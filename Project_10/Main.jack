@@ -1,0 +1,54 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/MemoryTest/Main.jack
+
+/** Test program for the OS Memory class. */
+class Main {
+
+    /** Performs several memory manipulations. */
+    function void main() {
+        var int temp;
+        var Array a, b, c, d;
+        
+        do Memory.poke(8000, 333);       // RAM[8000] = 333
+        let temp = Memory.peek(8000);
+        do Memory.poke(8001, temp + 1);  // RAM[8001] = 334
+        
+        let a = Memory.alloc(3);          // uses Memory.alloc
+        let a[2] = 222;
+        do Memory.poke(8002, a[2]);      // RAM[8002] = 222
+        do Sys.wait(5000); 
+        
+        let b = Memory.alloc(3);
+        let b[1] = a[2] - 100;
+        do Memory.poke(8003, b[1]);       // RAM[8003] = 122
+        do Sys.wait(5000); 
+
+        let c = Memory.alloc(500);
+        let c[499] = a[2] - b[1];
+        do Memory.poke(8004, c[499]);     // RAM[8004] = 100
+        
+        do Memory.deAlloc(a);                   // uses Memory.deAlloc
+        do Sys.wait(5000); 
+        do Memory.deAlloc(b);
+        do Sys.wait(5000); 
+        
+        let b = Memory.alloc(3);
+        let b[0] = c[499] - 90;
+        do Memory.poke(8005, b[0]);       // RAM[8005] = 10 
+        do Sys.wait(5000); 
+        
+        do Memory.deAlloc(c);
+        do Sys.wait(5000); 
+        do Memory.deAlloc(b); 
+        do Sys.wait(5000); 
+
+        let d = Memory.alloc(100);
+        let d[0] = 420;
+        do Memory.poke(8005, d[0]);       // RAM[8005] = 10  
+        do Sys.wait(5000);
+        do Memory.deAlloc(d);
+        return;
+    }
+}

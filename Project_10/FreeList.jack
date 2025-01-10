@@ -1,0 +1,21 @@
+class FreeList {
+  field Node head;
+  
+  method Node Head() {
+    return head;
+  }
+
+  method void setHead (Node h) {
+    // If memory hasn't been initialized yet.
+    if (h = null) {
+      let head = 2049;
+      do head.setAllocated(0);
+      do head.setLength(14336);
+      do head.setNext(null);
+      return;
+    }
+
+    let head = h;
+    return;
+  }
+}

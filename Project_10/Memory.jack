@@ -1,0 +1,134 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * Memory operations library.
+ */ 
+class Memory {
+  static Array memory;
+  static FreeList free;
+  static int heapBase;
+  static int METADATA_SIZE;
+
+    /** Initializes memory parameters. */
+    function void init() {
+      let memory = 0;
+      let free = 2048;
+      let heapBase = 2049;
+      let METADATA_SIZE = 3;
+      do free.setHead(null);
+      return;
+    }
+
+    /** Returns the value of the main memory at the given address. */
+    function int peek(int address) {
+      return memory[address];
+    }
+
+    /** Sets the value of the main memory at this address
+     *  to the given value. */
+    function void poke(int address, int value) {
+      let memory[address] = value;
+      return;
+    }
+
+    /** Finds and allocates from the heap a memory block of the 
+     *  specified size and returns a reference to its base address. */
+    function Array alloc(int size) {
+      var Node current, prev, newNode;
+      var int allocSuccess, length, next;
+      var Array block;
+      var int remaining;
+      var int offset;
+      
+      let allocSuccess = 0;
+      let current = free.Head();
+      let prev = null;
+      
+      // While there's still a free node left.
+      while (~(current = null)) {
+        let length = current.Length();
+        let next = current.Next();
+
+        // If the size of the free node is large enough.
+        if (current.Allocated() = 0) {
+          if (length > (size + METADATA_SIZE)) {
+            let allocSuccess = 1;
+          }
+          
+          if (length = (size + METADATA_SIZE)) {
+            let allocSuccess = 1;
+          }
+        }
+
+        if (allocSuccess = 1) {
+          let offset = Math.abs((length - 14336));
+          
+          // Sets new block's address to the free space after the block metadata.
+          let block = current;
+          let block[0] = 1; // Marks the block as allocated.  
+          let block[1] = size + METADATA_SIZE;
+          let block = block + METADATA_SIZE; 
+
+          // Calculates the remaining free space left in the current node.
+          let remaining = length - (size + METADATA_SIZE);
+          
+          // If ram isn't exhausted, update the free space in the freeList.
+          if (remaining > METADATA_SIZE) {
+            let newNode = block + size;
+            do newNode.setAllocated(0);
+            do newNode.setLength(remaining);
+            do newNode.setNext(current.Next());
+            
+            // If the current node is the first node in the list.
+            if (prev = null) {
+              do free.setHead(newNode); 
+            } 
+
+            else {
+              do prev.setNext(newNode);
+            }
+          } 
+          
+          // If ram is full.
+          else {
+            if (prev = null) {
+              do free.setHead(current.Next());
+            } 
+
+            else {
+              do prev.setNext(current.Next());
+            }
+          }
+          return block;
+        }
+
+        let prev = current;
+        let current = current.Next();
+      }
+
+      // If allocation fails.
+      return null;
+    }
+
+    /** De-allocates the given object and frees its space. */
+    function void deAlloc(Array object) {
+      var Node segment;
+      var int size;
+      var int objectAddress;
+      
+      // Get the object's address with the metadata included.
+      let objectAddress = object - METADATA_SIZE;
+      let size = memory[object - 2];
+      
+      // Create a node for the freed segment and put it first in the freeList.
+      let segment = objectAddress;
+      do segment.setAllocated(0);
+      do segment.setLength(size);
+      do segment.setNext(free.Head());
+      do free.setHead(segment);
+      return;
+    }    
+}
