@@ -9,3 +9,5 @@ This is my work in the nand2tetris series!
 💜 **Project 7**: The Jack VM Translator, part II
 <br>
 💜 **Project 8**: The Jack Syntax Analyzer
+<br>
+💜 **Project 9**: The Jack Compiler
