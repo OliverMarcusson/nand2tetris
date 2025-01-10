@@ -486,9 +486,11 @@ class CompileEngine(object):
         """
         objectName = None
         toCall = None
+
         if subroutineName == None:
             subroutineName = self._ExpectIdentifier()
             self._NextToken()
+        
         self._WriteXml('identifier', subroutineName)
         className = subroutineName
         
@@ -508,17 +510,17 @@ class CompileEngine(object):
             self._NextToken()
         else:
             toCall = className
+        
         numArgs = self._CompileExpressionList()
         
         self._ExpectSymbol(')')
         self._WriteXml('symbol', self.tokenizer.Symbol())
         self._NextToken()
+        
+        # If call isn't qualified 
         if not toCall:
             toCall = f"{className}.{methodName}"
         self.vmWriter.WriteCall(f"{toCall}", numArgs)
-
-        
-
 
     def _CompileReturn(self):
         """
@@ -556,7 +558,7 @@ class CompileEngine(object):
             '{' <statements> '}' )?
 
         ENTRY: Tokenizer positioned on the first keyword.
-        EXIT:  Tokenizer positioned after final '}'.
+        EXIT:  Tokenizer positioned after final isn't isn't qualified.
         """
         self._WriteXmlTag('<ifStatement>\n')
 
@@ -593,6 +595,7 @@ class CompileEngine(object):
         if self.tokenizer.KeywordStr() == "else":
             endLabel = self._UniqueLabel()
             self.vmWriter.WriteGoto(endLabel)
+
         self.vmWriter.WriteLabel(endIfLabel)
 
         if self.tokenizer.KeywordStr() == "else":
