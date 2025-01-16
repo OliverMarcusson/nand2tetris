@@ -11,3 +11,5 @@ This is my work in the nand2tetris series!
 💜 **Project 8**: The Jack Syntax Analyzer
 <br>
 💜 **Project 9**: The Jack Compiler
+<br>
+💜 **Project 10**: The Jack Operating System
